@@ -7,12 +7,6 @@ class AsteroideSerializer(serializers.ModelSerializer):
         model = Asteroide
         fields = '__all__'
 
-# Serializer da Nave
-class NaveSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Nave
-        fields = '__all__'
-
 # Serializer da Mineracao
 class MineracaoSerializer(serializers.ModelSerializer):
     class Meta:

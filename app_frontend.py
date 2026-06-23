@@ -30,7 +30,7 @@ with col_form:
         nome = st.text_input("Nome/Designação do Asteroide", placeholder="Ex: Psyche 16")
         tipo = st.selectbox("Classe/Tipo", ["M", "C", "S"])
         distancia = st.number_input("Distância da Base (Unidades)", min_value=1, value=120)
-        
+        tamanho = st.number_input("Tamanho do Asteroide (km)", min_value=0.1, value=10.0, step=0.1)
         st.write("📊 **Composição Estimada (0% a 100%):**")
         ferro = st.slider("Porcentagem de Ferro (%)", 0, 100, 45)
         niquel = st.slider("Porcentagem de Níquel (%)", 0, 100, 15)
@@ -51,6 +51,7 @@ if botao_mapear:
                 "nome": str(nome),
                 "tipo": str(tipo),
                 "distancia": int(distancia),
+                "tamanho": float(tamanho), 
                 "ferro": int(ferro),
                 "niquel": int(niquel),
                 "platina": int(platina),
@@ -115,11 +116,10 @@ if botao_mapear:
                     
                     # 5. SALVANDO O HISTÓRICO DE MINERAÇÃO NO BACKEND (DJANGO)
                     payload_mineracao = {
-                        "asteroide": int(asteroide_id),
-                        "nave": 1, 
-                        "total_minerado": float(toneladas_obtidas),
-                        "valor_ganho": float(valor_mercado)
-                    }
+                    "asteroide": int(asteroide_id), 
+                    "total_minerado": float(toneladas_obtidas),
+                    "valor_ganho": float(valor_mercado)
+}
                     
                     try:
                         response_min = requests.post(f"{API_BASE_URL}/mineracoes/", json=payload_mineracao)

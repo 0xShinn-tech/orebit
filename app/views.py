@@ -8,11 +8,6 @@ class AsteroideViewSet(viewsets.ModelViewSet):
     queryset = Asteroide.objects.all() 
     serializer_class = AsteroideSerializer
 
-# API de Naves
-class NaveViewSet(viewsets.ModelViewSet):
-    queryset = Nave.objects.all() 
-    serializer_class = NaveSerializer
-
 # API de Mineracoes
 class MineracaoViewSet(viewsets.ModelViewSet):
     queryset = Mineracao.objects.all() 
