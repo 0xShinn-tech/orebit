@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ore-Bit — Central de Mineração</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0b0f1a;--sidebar:#0d1220;--card:#111827;--border:#1e2a40;
+    --text:#e0e6f0;--muted:#7aa2c8;--accent:#3b82f6;--accent2:#22d3ee;
+    --success:#4ade80;--warn:#facc15;--danger:#f87171;
+    --font:'Segoe UI',system-ui,sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh}
+
+  /* SIDEBAR */
+  #sidebar{width:220px;min-height:100vh;background:var(--sidebar);border-right:1px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:.5rem;flex-shrink:0}
+  #sidebar h1{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.25rem}
+  .badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:600;padding:.3rem .7rem;border-radius:999px;margin-bottom:.75rem}
+  .badge.online{background:rgba(74,222,128,.15);color:var(--success)}
+  .badge.offline{background:rgba(248,113,113,.15);color:var(--danger)}
+  #sidebar hr{border:none;border-top:1px solid var(--border);margin:.5rem 0}
+  #sidebar .nav-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.5rem}
+  .nav-item{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;border-radius:8px;cursor:pointer;font-size:.85rem;color:var(--muted);transition:background .15s,color .15s;border:none;background:none;width:100%;text-align:left}
+  .nav-item:hover{background:rgba(59,130,246,.1);color:var(--text)}
+  .nav-item.active{background:rgba(59,130,246,.18);color:var(--accent);font-weight:600}
+  .nav-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0}
+  .nav-item.active .nav-dot{background:var(--accent)}
+  #sidebar footer{margin-top:auto;font-size:.7rem;color:var(--muted);padding-top:.5rem;border-top:1px solid var(--border)}
+
+  /* MAIN */
+  #main{flex:1;padding:2rem 2.5rem;overflow-y:auto}
+  .page{display:none}.page.active{display:block}
+  h2{font-size:1.6rem;font-weight:800;color:#a8d4ff;margin-bottom:.25rem}
+  .subtitle{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem}
+  hr.divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
+
+  /* METRICS */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:1.5rem}
+  .metric{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
+  .metric .mlabel{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.4rem}
+  .metric .mval{font-size:1.6rem;font-weight:700;color:var(--text)}
+  .metric .mdelta{font-size:.75rem;margin-top:.25rem;color:var(--success)}
+
+  /* CHARTS */
+  .chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem}
+  .chart-wrap h3{font-size:.95rem;font-weight:600;color:var(--muted);margin-bottom:1rem}
+  canvas{max-height:280px}
+
+  /* TABLE */
+  .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.5rem}
+  .table-wrap h3{font-size:.95rem;font-weight:600;color:var(--muted);padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;font-size:.82rem}
+  th{background:rgba(30,42,64,.6);color:var(--muted);text-align:left;padding:.65rem 1rem;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+  td{padding:.65rem 1rem;border-top:1px solid var(--border);color:var(--text)}
+  tr:hover td{background:rgba(59,130,246,.05)}
+
+  /* FORMS */
+  .form-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem}
+  .form-card h3{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:1.25rem}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .form-grid.single{grid-template-columns:1fr}
+  .field{display:flex;flex-direction:column;gap:.4rem}
+  label{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  input,select{background:#0d1829;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.55rem .75rem;font-size:.875rem;font-family:var(--font);width:100%;outline:none;transition:border-color .2s}
+  input:focus,select:focus{border-color:var(--accent)}
+  select option{background:#0d1829}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.6rem 1.4rem;border-radius:8px;font-size:.875rem;font-weight:600;cursor:pointer;border:none;transition:opacity .2s}
+  .btn-primary{background:linear-gradient(135deg,#1a3a6e,#0e5fa8);color:#e8f0fe;width:100%;padding:.75rem}
+  .btn-primary:hover{opacity:.85}
+  .btn-danger{background:rgba(248,113,113,.15);color:var(--danger);border:1px solid rgba(248,113,113,.3);padding:.4rem .8rem;font-size:.78rem}
+  .btn-danger:hover{background:rgba(248,113,113,.25)}
+
+  /* ALERTS */
+  .alert{padding:.75rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:1rem}
+  .alert.success{background:rgba(74,222,128,.12);color:var(--success);border:1px solid rgba(74,222,128,.25)}
+  .alert.error{background:rgba(248,113,113,.12);color:var(--danger);border:1px solid rgba(248,113,113,.25)}
+  .alert.info{background:rgba(59,130,246,.12);color:var(--accent);border:1px solid rgba(59,130,246,.25)}
+  .alert.warn{background:rgba(250,204,21,.1);color:var(--warn);border:1px solid rgba(250,204,21,.2)}
+
+  /* BADGES */
+  .risk{display:inline-block;padding:.2rem .55rem;border-radius:999px;font-size:.72rem;font-weight:700}
+  .risk.Baixo{background:rgba(74,222,128,.15);color:var(--success)}
+  .risk.Médio,.risk.Medio{background:rgba(250,204,21,.15);color:var(--warn)}
+  .risk.Alto{background:rgba(248,113,113,.15);color:var(--danger)}
+
+  /* RADAR POLAR */
+  #radarCanvas{display:block;margin:0 auto}
+  .radar-legend{display:flex;gap:1.5rem;justify-content:center;margin-top:.75rem;font-size:.78rem}
+  .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem}
+
+  /* STATUS NAV */
+  #statusDot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.4rem}
+
+  /* LOADING */
+  .loading{color:var(--muted);font-size:.85rem;padding:1rem}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <h1>&#9824; Ore-Bit Control</h1>
+  <span id="backendBadge" class="badge offline">&#9679; Verificando...</span>
+  <hr>
+  <div class="nav-label">Navegação</div>
+  <button class="nav-item active" onclick="navigate('central')" id="nav-central">
+    <span class="nav-dot"></span>Central de Mineração
+  </button>
+  <button class="nav-item" onclick="navigate('radar')" id="nav-radar">
+    <span class="nav-dot"></span>Radar Espacial
+  </button>
+  <button class="nav-item" onclick="navigate('asteroides')" id="nav-asteroides">
+    <span class="nav-dot"></span>Asteroides
+  </button>
+  <button class="nav-item" onclick="navigate('naves')" id="nav-naves">
+    <span class="nav-dot"></span>Cadastrar Naves
+  </button>
+  <button class="nav-item" onclick="navigate('historico')" id="nav-historico">
+    <span class="nav-dot"></span>Histórico de Operações
+  </button>
+  <footer>Controle de Extração e Gestão de Ativos Espaciais v2.0</footer>
+</nav>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- PÁGINA 1: CENTRAL -->
+  <div class="page active" id="page-central">
+    <h2>&#9824; Ore-Bit — Painel de Mapeamento</h2>
+    <p class="subtitle">Visão geral em tempo real do processamento de minérios da frota.</p>
+    <div class="metrics" id="metrics-central">
+      <div class="metric"><div class="mlabel">Naves na Frota</div><div class="mval" id="m-total-naves">—</div></div>
+      <div class="metric"><div class="mlabel">Naves Ativas</div><div class="mval" id="m-naves-ativas">—</div></div>
+      <div class="metric"><div class="mlabel">Total Extraído (t)</div><div class="mval" id="m-total-minerado">—</div></div>
+      <div class="metric"><div class="mlabel">Asteroides Mapeados</div><div class="mval" id="m-asteroides">—</div></div>
+    </div>
+    <hr class="divider">
+    <div class="chart-wrap">
+      <h3>&#128200; Composição Mineral dos Asteroides</h3>
+      <canvas id="chartAsteroides"></canvas>
+      <p id="noAsteroides" class="alert info" style="display:none">Nenhum asteroide cadastrado. Acesse <strong>Asteroides</strong> para adicionar.</p>
+    </div>
+    <div class="table-wrap" id="wrapUltOp" style="display:none">
+      <h3>&#128336; Últimas Operações</h3>
+      <table><thead><tr><th>Nave</th><th>Minério</th><th>Qtd (t)</th><th>Data</th></tr></thead>
+      <tbody id="tbodyUltOp"></tbody></table>
+    </div>
+  </div>
+
+  <!-- PÁGINA 2: RADAR -->
+  <div class="page" id="page-radar">
+    <h2>&#128752; Radar de Varredura Espacial</h2>
+    <p class="subtitle">Monitore alvos ativos e despache naves para extração imediata.</p>
+    <hr class="divider">
+    <div id="radarAlert"></div>
+    <div class="chart-wrap">
+      <h3>&#128308; Sinais Ativos de Varredura</h3>
+      <canvas id="radarCanvas" width="420" height="320"></canvas>
+      <div class="radar-legend">
+        <span><span class="legend-dot" style="background:#4ade80"></span>Baixo</span>
+        <span><span class="legend-dot" style="background:#facc15"></span>Médio</span>
+        <span><span class="legend-dot" style="background:#f87171"></span>Alto</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <h3>&#128203; Alvos Detectados</h3>
+      <table><thead><tr><th>Alvo</th><th>Quadrante</th><th>Minério</th><th>Volume (t)</th><th>Risco</th></tr></thead>
+      <tbody id="tbodyAlvos"></tbody></table>
+    </div>
+    <hr class="divider">
+    <div class="form-card">
+      <h3>&#127919; Travar Mira e Despachar Nave</h3>
+      <div id="dispatchAlert"></div>
+      <div class="form-grid">
+        <div class="field"><label>Alvo Detectado</label><select id="selAlvo"></select></div>
+        <div class="field"><label>Nave Disponível</label><select id="selNave"></select></div>
+      </div>
+      <div class="field" style="margin-top:1rem">
+        <label id="lblQtd">Volume de Extração (t)</label>
+        <input type="number" id="inputQtd" min="1" step="10" value="100"/>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="despacharNave()">&#128165; Executar Incursão de Extração</button>
+    </div>
+  </div>
+
+  <!-- PÁGINA 3: ASTEROIDES -->
+  <div class="page" id="page-asteroides">
+    <h2>&#9732; Banco de Asteroides</h2>
+    <p class="subtitle">Consulte e cadastre corpos celestes com composição mineral detalhada.</p>
+    <hr class="divider">
+    <div class="table-wrap">
+      <h3>&#128203; Asteroides Cadastrados</h3>
+      <table><thead><tr><th>Nome</th><th>Tipo</th><th>Tamanho (km)</th><th>Distância (UA)</th><th>Ferro</th><th>Níquel</th><th>Platina</th><th>Água</th></tr></thead>
+      <tbody id="tbodyAsteroides"></tbody></table>
+      <p id="noAst2" class="loading" style="display:none;padding:1rem 1.25rem">Nenhum asteroide cadastrado ainda.</p>
+    </div>
+    <div class="form-card">
+      <h3>&#10133; Cadastrar Novo Asteroide</h3>
+      <div id="astAlert"></div>
+      <div class="form-grid">
+        <div class="field"><label>Nome</label><input type="text" id="astNome" placeholder="Ex: Ryugu-7"/></div>
+        <div class="field"><label>Tipo</label>
+          <select id="astTipo"><option>Rochoso</option><option>Metálico</option><option>Carbonáceo</option><option>Gelado</option></select>
+        </div>
+        <div class="field"><label>Tamanho (km)</label><input type="number" id="astTamanho" value="2.5" step="0.1" min="0.1"/></div>
+        <div class="field"><label>Distância da Terra (UA)</label><input type="number" id="astDistancia" value="1.8" step="0.1" min="0.1"/></div>
+        <div class="field"><label>Ferro (t)</label><input type="number" id="astFerro" value="500" step="10" min="0"/></div>
+        <div class="field"><label>Níquel (t)</label><input type="number" id="astNiquel" value="100" step="10" min="0"/></div>
+        <div class="field"><label>Platina (t)</label><input type="number" id="astPlatina" value="20" step="1" min="0"/></div>
+        <div class="field"><label>Água (t)</label><input type="number" id="astAgua" value="50" step="5" min="0"/></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="cadastrarAsteroide()">Registrar Asteroide</button>
+    </div>
+  </div>
+
+  <!-- PÁGINA 4: NAVES -->
+  <div class="page" id="page-naves">
+    <h2>&#128640; Gerenciamento da Frota</h2>
+    <p class="subtitle">Cadastre e gerencie as embarcações da frota.</p>
+    <hr class="divider">
+    <div class="table-wrap">
+      <h3>&#128760; Frota Atual</h3>
+      <table><thead><tr><th>Nome</th><th>Capacidade Máx (t)</th><th>Velocidade (t/h)</th><th>Status</th></tr></thead>
+      <tbody id="tbodyNaves"></tbody></table>
+      <p id="noNaves" class="loading" style="display:none;padding:1rem 1.25rem">Nenhuma nave cadastrada ainda.</p>
+    </div>
+    <div class="form-card">
+      <h3>&#10133; Cadastrar Nova Nave</h3>
+      <div id="naveAlert"></div>
+      <div class="form-grid">
+        <div class="field"><label>Nome da Nave</label><input type="text" id="naveNome" placeholder="Ex: Nebulosa X"/></div>
+        <div class="field"><label>Status Operacional</label>
+          <select id="naveStatus"><option>Ativa</option><option>Em Manutenção</option><option>Inativa</option></select>
+        </div>
+        <div class="field"><label>Capacidade Máxima (t)</label><input type="number" id="naveCap" value="500" step="50" min="1"/></div>
+        <div class="field"><label>Velocidade de Mineração (t/h)</label><input type="number" id="naveVel" value="50" step="5" min="1"/></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="cadastrarNave()">Registrar Nave na Frota</button>
+    </div>
+  </div>
+
+  <!-- PÁGINA 5: HISTÓRICO -->
+  <div class="page" id="page-historico">
+    <h2>&#128202; Histórico Geral de Extração</h2>
+    <p class="subtitle">Todos os registros de mineração armazenados no banco central.</p>
+    <hr class="divider">
+    <div class="metrics">
+      <div class="metric"><div class="mlabel">Total de Operações</div><div class="mval" id="h-ops">—</div></div>
+      <div class="metric"><div class="mlabel">Total Extraído (t)</div><div class="mval" id="h-total">—</div></div>
+      <div class="metric"><div class="mlabel">Minério Mais Extraído</div><div class="mval" id="h-top" style="font-size:1.1rem">—</div></div>
+    </div>
+    <hr class="divider">
+    <div class="chart-wrap">
+      <h3>&#127829; Distribuição por Minério</h3>
+      <canvas id="chartPie" style="max-height:220px"></canvas>
+    </div>
+    <div class="table-wrap">
+      <h3>&#128203; Registros Completos</h3>
+      <table><thead><tr><th>ID</th><th>Nave</th><th>Minério</th><th>Qtd (t)</th><th>Data</th></tr></thead>
+      <tbody id="tbodyHistorico"></tbody></table>
+      <p id="noHist" class="loading" style="display:none;padding:1rem 1.25rem">Nenhuma operação registrada.</p>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const API = 'http://127.0.0.1:8000/api';
+const NO_PROXY = {credentials:'omit'};
+
+let chartAst = null, chartPie = null;
+let alvosData = [], navesData = [];
+
+async function apiFetch(endpoint, opts={}) {
+  const url = `${API}/${endpoint}/`;
+  const defaults = {headers:{'Content-Type':'application/json'}};
+  const res = await fetch(url, {...defaults, ...opts});
+  return res;
+}
+
+async function apiGet(endpoint) {
+  try {
+    const r = await apiFetch(endpoint);
+    if (r.ok) return {data: await r.json(), ok: true};
+    return {data: [], ok: false};
+  } catch(e) { return {data: [], ok: false}; }
+}
+
+async function apiPost(endpoint, body) {
+  try {
+    const r = await apiFetch(endpoint, {method:'POST', body: JSON.stringify(body)});
+    const data = await r.json().catch(()=>({}));
+    return {data, ok: r.ok, status: r.status};
+  } catch(e) { return {data:{}, ok:false, status:0}; }
+}
+
+function showAlert(id, msg, type) {
+  document.getElementById(id).innerHTML = `<div class="alert ${type}">${msg}</div>`;
+  setTimeout(() => { const el = document.getElementById(id); if(el) el.innerHTML=''; }, 4000);
+}
+
+// NAVEGAÇÃO
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page).classList.add('active');
+  if(page==='central') loadCentral();
+  if(page==='radar') loadRadar();
+  if(page==='asteroides') loadAsteroides();
+  if(page==='naves') loadNaves();
+  if(page==='historico') loadHistorico();
+}
+
+// STATUS BACKEND
+async function checkBackend() {
+  const {ok} = await apiGet('naves');
+  const badge = document.getElementById('backendBadge');
+  if(ok) {
+    badge.className = 'badge online';
+    badge.textContent = '● Backend Online';
+  } else {
+    badge.className = 'badge offline';
+    badge.textContent = '● Backend Offline';
+  }
+}
+
+// PÁGINA 1: CENTRAL
+async function loadCentral() {
+  const [rNaves, rHist, rAst] = await Promise.all([
+    apiGet('naves'), apiGet('historico'), apiGet('asteroides')
+  ]);
+  const naves = rNaves.data; const hist = rHist.data; const ast = rAst.data;
+
+  document.getElementById('m-total-naves').textContent = rNaves.ok ? naves.length : '—';
+  document.getElementById('m-naves-ativas').textContent = rNaves.ok ? naves.filter(n=>n.status?.toLowerCase()==='ativa').length : '—';
+  const totalMin = rHist.ok ? hist.reduce((s,h)=>s+(h.quantidade||0),0) : null;
+  document.getElementById('m-total-minerado').textContent = totalMin !== null ? totalMin.toLocaleString('pt-BR') : '—';
+  document.getElementById('m-asteroides').textContent = rAst.ok ? ast.length : '—';
+
+  const noAst = document.getElementById('noAsteroides');
+  if (rAst.ok && ast.length > 0) {
+    noAst.style.display = 'none';
+    const labels = ast.map(a=>a.nome);
+    const datasets = [
+      {label:'Ferro (t)', data: ast.map(a=>a.ferro||0), backgroundColor:'#3b82f6'},
+      {label:'Níquel (t)', data: ast.map(a=>a.niquel||0), backgroundColor:'#22d3ee'},
+      {label:'Platina (t)', data: ast.map(a=>a.platina||0), backgroundColor:'#a78bfa'},
+      {label:'Água (t)', data: ast.map(a=>a.agua||0), backgroundColor:'#34d399'},
+    ];
+    if (chartAst) chartAst.destroy();
+    chartAst = new Chart(document.getElementById('chartAsteroides'), {
+      type:'bar', data:{labels, datasets},
+      options:{responsive:true, plugins:{legend:{labels:{color:'#e0e6f0'}}},
+        scales:{x:{ticks:{color:'#7aa2c8'},grid:{color:'#1e2a40'}},y:{ticks:{color:'#7aa2c8'},grid:{color:'#1e2a40'}}}}
+    });
+  } else {
+    noAst.style.display = 'block';
+  }
+
+  const wrapUlt = document.getElementById('wrapUltOp');
+  const tbody = document.getElementById('tbodyUltOp');
+  if (rHist.ok && hist.length > 0) {
+    wrapUlt.style.display = 'block';
+    tbody.innerHTML = hist.slice(0,5).map(h=>`<tr>
+      <td>${h.nave}</td><td>${h.minerio}</td>
+      <td>${(h.quantidade||0).toLocaleString('pt-BR')}</td><td>${h.data}</td>
+    </tr>`).join('');
+  } else { wrapUlt.style.display = 'none'; }
+}
+
+// PÁGINA 2: RADAR
+async function loadRadar() {
+  const [rAlvos, rNaves] = await Promise.all([apiGet('alvosradar'), apiGet('naves')]);
+  alvosData = rAlvos.data; navesData = rNaves.data;
+  const alertEl = document.getElementById('radarAlert');
+
+  if (!rAlvos.ok) {
+    alertEl.innerHTML = `<div class="alert error">Endpoint <code>/api/alvosradar/</code> não encontrado. Registre o <code>AlvoRadarViewSet</code> no urls.py.</div>`;
+    return;
+  }
+  alertEl.innerHTML = '';
+
+  // Polar radar canvas
+  const canvas = document.getElementById('radarCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx=canvas.width/2, cy=canvas.height/2, maxR=Math.min(cx,cy)-20;
+  ctx.strokeStyle='#1e2a40'; ctx.lineWidth=1;
+  [.25,.5,.75,1].forEach(f=>{ctx.beginPath();ctx.arc(cx,cy,maxR*f,0,Math.PI*2);ctx.stroke();});
+  [0,45,90,135,180,225,270,315].forEach(deg=>{
+    const r=deg*Math.PI/180;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+maxR*Math.cos(r),cy+maxR*Math.sin(r));ctx.stroke();
+  });
+
+  const colorMap={'Baixo':'#4ade80','Médio':'#facc15','Alto':'#f87171'};
+  alvosData.forEach((a,i)=>{
+    const ang=((i*67)%360)*Math.PI/180;
+    const dist=((i%8)+1.5)/9*maxR;
+    const px=cx+dist*Math.cos(ang), py=cy+dist*Math.sin(ang);
+    const r=Math.max(6,Math.min(22, a.volume_estimado/60));
+    ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);
+    ctx.fillStyle=colorMap[a.perigo_nivel]||'#7aa2c8';ctx.fill();
+    ctx.fillStyle='#e0e6f0';ctx.font='10px sans-serif';ctx.textAlign='center';
+    ctx.fillText(a.nome_alvo.split(' ')[0],px,py-r-3);
+  });
+
+  // Tabela de alvos
+  const tbAlvos = document.getElementById('tbodyAlvos');
+  tbAlvos.innerHTML = alvosData.map(a=>`<tr>
+    <td>${a.nome_alvo}</td><td>${a.quadrante}</td><td>${a.minerio_disponivel}</td>
+    <td>${(a.volume_estimado||0).toLocaleString('pt-BR')}</td>
+    <td><span class="risk ${a.perigo_nivel}">${a.perigo_nivel}</span></td>
+  </tr>`).join('');
+
+  // Selects do formulário
+  const selAlvo = document.getElementById('selAlvo');
+  selAlvo.innerHTML = alvosData.map((a,i)=>
+    `<option value="${i}">${a.nome_alvo} | ${a.minerio_disponivel} (${a.volume_estimado}t)</option>`).join('');
+  selAlvo.onchange = () => {
+    const a = alvosData[+selAlvo.value];
+    document.getElementById('inputQtd').max = a.volume_estimado;
+    document.getElementById('inputQtd').value = Math.round(a.volume_estimado/2);
+    document.getElementById('lblQtd').textContent = `Volume de Extração (Máx: ${a.volume_estimado}t)`;
+  };
+  if(alvosData.length) selAlvo.onchange();
+
+  const navesAtivas = navesData.filter(n=>n.status?.toLowerCase()==='ativa');
+  const selNave = document.getElementById('selNave');
+  selNave.innerHTML = navesAtivas.length
+    ? navesAtivas.map(n=>`<option>${n.nome}</option>`).join('')
+    : '<option>Nenhuma nave ativa</option>';
+}
+
+async function despacharNave() {
+  const selAlvo = document.getElementById('selAlvo');
+  const selNave = document.getElementById('selNave');
+  const qtd = parseFloat(document.getElementById('inputQtd').value);
+  const alvo = alvosData[+selAlvo.value];
+  const nave = selNave.value;
+  if (nave==='Nenhuma nave ativa') { showAlert('dispatchAlert','Nenhuma nave ativa disponível.','error'); return; }
+  const {ok, status} = await apiPost('historico', {nave, minerio: alvo.minerio_disponivel, quantidade: qtd});
+  if (ok) showAlert('dispatchAlert',`✓ ${nave} despachada para extrair ${qtd}t de ${alvo.minerio_disponivel}!`,'success');
+  else showAlert('dispatchAlert',`Erro ao registrar operação (Status ${status}).`,'error');
+}
+
+// PÁGINA 3: ASTEROIDES
+async function loadAsteroides() {
+  const {data, ok} = await apiGet('asteroides');
+  const tbody = document.getElementById('tbodyAsteroides');
+  const noMsg = document.getElementById('noAst2');
+  if (ok && data.length) {
+    noMsg.style.display='none';
+    tbody.innerHTML = data.map(a=>`<tr>
+      <td>${a.nome}</td><td>${a.tipo}</td><td>${a.tamanho}</td><td>${a.distancia}</td>
+      <td>${a.ferro}</td><td>${a.niquel}</td><td>${a.platina}</td><td>${a.agua}</td>
+    </tr>`).join('');
+  } else { noMsg.style.display='block'; tbody.innerHTML=''; }
+}
+
+async function cadastrarAsteroide() {
+  const nome = document.getElementById('astNome').value.trim();
+  if (!nome) { showAlert('astAlert','Informe um nome para o asteroide.','error'); return; }
+  const payload = {
+    nome, tipo: document.getElementById('astTipo').value,
+    tamanho: +document.getElementById('astTamanho').value,
+    distancia: +document.getElementById('astDistancia').value,
+    ferro: +document.getElementById('astFerro').value,
+    niquel: +document.getElementById('astNiquel').value,
+    platina: +document.getElementById('astPlatina').value,
+    agua: +document.getElementById('astAgua').value,
+  };
+  const {ok, status} = await apiPost('asteroides', payload);
+  if (ok) { showAlert('astAlert',`✓ Asteroide "${nome}" registrado!`,'success'); loadAsteroides(); }
+  else showAlert('astAlert',`Erro ao cadastrar (Status ${status}).`,'error');
+}
+
+// PÁGINA 4: NAVES
+async function loadNaves() {
+  const {data, ok} = await apiGet('naves');
+  const tbody = document.getElementById('tbodyNaves');
+  const noMsg = document.getElementById('noNaves');
+  if (ok && data.length) {
+    noMsg.style.display='none';
+    tbody.innerHTML = data.map(n=>`<tr>
+      <td>${n.nome}</td><td>${n.capacidade_maxima}</td>
+      <td>${n.velocidade_mineracao}</td>
+      <td><span class="risk ${n.status==='Ativa'?'Baixo':n.status==='Em Manutenção'?'Médio':'Alto'}">${n.status}</span></td>
+    </tr>`).join('');
+  } else { noMsg.style.display='block'; tbody.innerHTML=''; }
+}
+
+async function cadastrarNave() {
+  const nome = document.getElementById('naveNome').value.trim();
+  if (!nome) { showAlert('naveAlert','Informe um nome para a nave.','error'); return; }
+  const payload = {
+    nome, status: document.getElementById('naveStatus').value,
+    capacidade_maxima: +document.getElementById('naveCap').value,
+    velocidade_mineracao: +document.getElementById('naveVel').value,
+  };
+  const {ok, status} = await apiPost('naves', payload);
+  if (ok) { showAlert('naveAlert',`✓ Nave "${nome}" integrada à frota!`,'success'); loadNaves(); }
+  else showAlert('naveAlert',`Erro ao cadastrar (Status ${status}).`,'error');
+}
+
+// PÁGINA 5: HISTÓRICO
+async function loadHistorico() {
+  const {data, ok} = await apiGet('historico');
+  const noMsg = document.getElementById('noHist');
+  const tbody = document.getElementById('tbodyHistorico');
+  if (!ok || !data.length) {
+    noMsg.style.display='block'; tbody.innerHTML='';
+    document.getElementById('h-ops').textContent='—';
+    document.getElementById('h-total').textContent='—';
+    document.getElementById('h-top').textContent='—';
+    return;
+  }
+  noMsg.style.display='none';
+  document.getElementById('h-ops').textContent = data.length;
+  const total = data.reduce((s,h)=>s+(h.quantidade||0),0);
+  document.getElementById('h-total').textContent = total.toLocaleString('pt-BR');
+  const freq = {};
+  data.forEach(h=>{ freq[h.minerio]=(freq[h.minerio]||0)+1; });
+  const top = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
+  document.getElementById('h-top').textContent = top;
+
+  const sorted = [...data].sort((a,b)=>b.data>a.data?1:-1);
+  tbody.innerHTML = sorted.map(h=>`<tr>
+    <td>${h.id}</td><td>${h.nave}</td><td>${h.minerio}</td>
+    <td>${(h.quantidade||0).toLocaleString('pt-BR')}</td><td>${h.data}</td>
+  </tr>`).join('');
+
+  // Gráfico pizza
+  const grupos = {};
+  data.forEach(h=>{ grupos[h.minerio]=(grupos[h.minerio]||0)+(h.quantidade||0); });
+  const pieLabels = Object.keys(grupos);
+  const pieData = Object.values(grupos);
+  const pieColors = ['#3b82f6','#22d3ee','#a78bfa','#34d399','#facc15','#f87171'];
+  if(chartPie) chartPie.destroy();
+  chartPie = new Chart(document.getElementById('chartPie'),{
+    type:'pie', data:{labels:pieLabels, datasets:[{data:pieData, backgroundColor:pieColors.slice(0,pieLabels.length)}]},
+    options:{responsive:true, plugins:{legend:{position:'right',labels:{color:'#e0e6f0'}}}}
+  });
+}
+
+// INIT
+checkBackend();
+loadCentral();
+</script>
+</body>
+</html>

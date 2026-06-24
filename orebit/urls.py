@@ -4,12 +4,13 @@ from rest_framework.routers import DefaultRouter
 from app.views import AsteroideViewSet, NaveViewSet, MineracaoViewSet
 from app import views 
 
-router = DefaultRouter()
-router.register(r'asteroides', AsteroideViewSet)
-router.register(r'naves', NaveViewSet)
-router.register(r'mineracoes', MineracaoViewSet)
-router.register(r'historico', views.HistoricoViewSet, basename='historico') 
+app = DefaultRouter()
+app.register(r'asteroides', AsteroideViewSet)
+app.register(r'naves', NaveViewSet)
+app.register(r'mineracoes', MineracaoViewSet)
+app.register(r'historico', views.HistoricoViewSet, basename='historico') 
+app.register(r'alvosradar', views.AlvoRadarViewSet, basename='alvosradar') 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
+    path('api/', include(app.urls)),
 ]
