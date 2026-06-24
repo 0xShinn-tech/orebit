@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import AlvoRadar, Asteroide, Nave, Mineracao
+from .models import AlvoRadar, Asteroide, Nave, Mineracao, HistoricoExtraecoes
 
 class AsteroideSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,8 +15,6 @@ class MineracaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mineracao
         fields = '__all__'
-from rest_framework import serializers
-from .models import HistoricoExtraecoes
 
 class HistoricoSerializer(serializers.ModelSerializer):
     class Meta:
